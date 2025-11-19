@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Presupuesto - Realtech SpA</title>
+
+<link rel="manifest" href="./manifest.json">
+
+<style>
+  /* --- ESTILOS BASE (Común a Escritorio y Móvil) --- */
+  body {
+    font-family: Arial, sans-serif;
+    background-color: #f0f0f0; 
+    margin: 0;
+    padding: 20px 0;
+    display: flex;
+    justify-content: center;
+  }
+
+  /* Hoja de Papel (FLUIDA en pantalla, RÍGIDA al imprimir) */
+  .documento {
+    background-color: white;
+    width: 95%; /* 95% del ancho en móvil */
+    max-width: 21.59cm; /* Límite para escritorio */
+    min-height: 100vh; /* Para que se vea completo en móvil */
+    padding: 15px; /* Menos padding en móvil */
+    box-sizing: border-box;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start; 
+    overflow: visible; /* Permitir el scroll en pantalla */
+  }
+
+  /* Header */
+  .header {
+    border-bottom: 2px solid #004a99;
+    padding-bottom: 10px;
+    margin-bottom: 15px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    flex-wrap: wrap; /* Permitir que los bloques se apilen en móvil */
+  }
+
+  .logo-area { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; flex-grow: 1; }
+  .logo img { width: 90px; display: block; } 
+  
+  .empresa-info { font-size: 11px; color: #000; line-height: 1.3; }
+  .empresa-nombre { font-size: 16px; font-weight: bold; color: #004a99; display: block; }
+  .titulo-doc { text-align: right; }
+  .titulo-doc h1 { font-size: 20px; margin: 0; color: #004a99; }
+  .fecha-box { font-size: 11px; margin-top: 5px; font-weight: bold; color: #333; }
+  .fecha-box input {
+    border: none; background: transparent; font-size: 11px; font-weight: bold; 
+    color: #333; padding: 0; width: 100px; outline: none;
+  }
+
+  /* Títulos de Sección */
+  h2 {
+    font-size: 10px; background: #f0f0f0; padding: 4px 8px;
+    border-left: 3px solid #004a99; text-transform: uppercase;
+    color: #222; margin-bottom: 8px; margin-top: 0;
+  }
+
+  /* Grid Cliente (Adaptable) */
+  .grid-cliente {
+    display: grid; 
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); 
+    gap: 8px 15px; 
+    margin-bottom: 15px;
+  }
+  .full-width { grid-column: 1 / -1; } 
+
+  label {
+    display: block; font-size: 8px; font-weight: bold;
+    color: #004a99; margin-bottom: 1px; text-transform: uppercase;
+  }
+  input, textarea, select {
+    width: 100%; border: none; border-bottom: 1px solid #ccc;
+    padding: 3px 0; font-size: 12px; outline: none; background: transparent;
+  }
+
+  /* Tabla Wrapper (Importante para scroll horizontal en móvil) */
+  .tabla-wrapper {
+    overflow-x: auto; 
+    margin-bottom: 15px; width: 100%;
+  }
+  table { 
+    width: 100%; 
+    min-width: 500px; 
+    border-collapse: collapse; 
+  }
+  th {
+    background: #004a99; color: white; font-size: 10px;
+    padding: 5px; text-align: left; text-transform: uppercase;
+  }
+  td { border-bottom: 1px solid #ddd; padding: 4px 5px; font-size: 11px; }
+  td input { background: #f5f5f5; padding: 2px; border-radius: 2px; border: none; font-size: 11px; }
+
+  /* Footer */
+  .footer-section { flex-shrink: 0; }
+
+  .totales { width: 100%; max-width: 240px; margin-left: auto; margin-bottom: 10px; }
+  .fila-total {
+    display: flex; justify-content: space-between; padding: 3px 0; font-size: 12px;
+  }
+  .total-final {
+    font-weight: bold; font-size: 15px; color: #004a99;
+    border-top: 2px solid #333; margin-top: 4px; padding-top: 4px;
+  }
+
+  /* Condiciones Grid (Adaptable) */
+  .grid-condiciones {
+    display: grid; 
+    grid-template-columns: 1fr 1fr; /* 2 Columnas en móvil */
+    gap: 10px; 
+    margin-bottom: 10px; background: #fafafa; 
+    padding: 8px; border-radius: 4px; border: 1px dashed #ccc;
+  }
+  .cond-item select { font-weight: bold; font-size: 11px; color: #333; cursor: pointer; }
+  
+  .obs-section textarea { min-height: 30px; font-size: 11px; resize: none; overflow: hidden; }
+
+  /* UI Botones */
+  .botonera { position: fixed; bottom: 15px; right: 15px; display: flex; gap: 8px; z-index: 100; }
+  button { 
+    padding: 8px 12px; cursor: pointer; border: none; border-radius: 4px; 
+    font-weight: bold; box-shadow: 0 2px 5px rgba(0,0,0,0.2); 
+    font-size: 12px;
+  }
+  .btn-azul { background: #004a99; color: white; }
+  .btn-gris { background: white; color: #333; }
+  .btn-borrar { 
+    background: #cc0000; color: white; width: 20px; height: 20px; 
+    padding: 0; border-radius: 3px; font-size: 10px; 
+  }
+
+  /* --- MEDIAS QUERIES PARA ESCRITORIO --- */
+  @media (min-width: 769px) {
+    .documento {
+      padding: 1cm 1.5cm; 
+      box-shadow: 0 0 20px rgba(0,0,0,0.5);
+    }
+    .grid-cliente {
+      grid-template-columns: 1fr 1fr 1fr; 
+    }
+    .grid-condiciones {
+      grid-template-columns: repeat(4, 1fr); 
+    }
+    .logo img { width: 110px; }
+    .logo-area { margin-bottom: 0; }
+    .empresa-info { font-size: 12px; }
+  }
+
+  /* =======================================================
+     ESTILOS DE IMPRESIÓN (La Vista de "Una Plana" Fija)
+     ======================================================= */
+  @media print {
+    @page { margin: 0mm !important; size: letter; }
+    body { margin: 0; padding: 0; background: white; }
+    
+    .documento {
+      width: 100%; 
+      height: 27.94cm; 
+      max-width: 100%; 
+      box-shadow: none;
+      padding: 1cm 1.5cm !important; 
+      margin: 0;
+      overflow: hidden; 
+    }
+
+    .botonera, .btn-borrar { display: none !important; }
+    
+    input, textarea, td input, select, .fecha-box input {
+      background: transparent !important; border: none !important; padding: 0 !important;
+      resize: none; appearance: none; -webkit-appearance: none;
+    }
+    .tabla-wrapper { overflow-x: hidden; } 
+    table { min-width: auto; }
+    input::placeholder { color: transparent; }
+    .grid-condiciones { border: none; padding: 0; background: transparent; }
+    h2, th { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    
+    .logo-area { align-items: flex-start; }
+    .titulo-doc h1 { font-size: 24px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="botonera">
+  <button class="btn-gris" onclick="agregarFila()">+ Ítem</button>
+  <button class="btn-azul" onclick="window.print()">Imprimir PDF</button>
+</div>
+
+<div class="documento" id="hoja">
+  
+  <div class="header">
+    <div class="logo-area">
+      <div class="logo">
+        <img src="logo_realtech.png" alt="Logo">
+      </div>
+      <div class="empresa-info">
+        <span class="empresa-nombre">Realtech SpA</span>
+        <strong>RUT: 77.651.114-5</strong><br>
+        Arturo Prat 780 of 203A, Temuco<br>
+        realtech.spa@gmail.com | +56 9 3957 3029
+      </div>
+    </div>
+    <div class="titulo-doc">
+      <h1>Presupuesto</h1>
+      <div class="fecha-box">
+        Emisión: <input type="date" id="fechaInput">
+      </div>
+    </div>
+  </div>
+
+  <h2>Información del Cliente</h2>
+  <div class="grid-cliente">
+    <div class="campo full-width">
+      <label>Cliente / Empresa</label>
+      <input type="text" placeholder="Nombre del cliente...">
+    </div>
+    <div class="campo">
+      <label>RUT (Opcional)</label>
+      <input type="text" placeholder="XX.XXX.XXX-X">
+    </div>
+    <div class="campo">
+      <label>Contacto</label>
+      <input type="text" placeholder="Atención a...">
+    </div>
+    <div class="campo">
+      <label>Email</label>
+      <input type="text" placeholder="correo@ejemplo.com">
+    </div>
+    <div class="campo">
+      <label>Teléfono</label>
+      <input type="text" placeholder="+56 9...">
+    </div>
+  </div>
+
+  <div class="tabla-wrapper">
+    <table>
+      <thead>
+        <tr>
+          <th style="width:55%">Descripción</th>
+          <th style="width:10%" class="text-right">Cant.</th>
+          <th style="width:15%" class="text-right">P. Unit.</th>
+          <th style="width:20%" class="text-right">Total</th>
+          <th style="width:20px"></th>
+        </tr>
+      </thead>
+      <tbody id="tablaCuerpo">
+        <tr class="fila">
+          <td><input class="desc" type="text" placeholder="Descripción del ítem"></td>
+          <td><input class="cant text-right" type="number" value="1" oninput="calcular()"></td>
+          <td><input class="precio text-right" type="number" value="0" oninput="calcular()"></td>
+          <td class="text-right"><span class="subtotal">$0</span></td>
+          <td><button class="btn-borrar" onclick="borrar(this)">x</button></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="footer-section">
+    <div class="totales">
+      <div class="fila-total">
+        <span>Neto:</span>
+        <span id="txtNeto">$0</span>
+      </div>
+      <div class="fila-total">
+        <span>IVA (19%):</span>
+        <span id="txtIva">$0</span>
+      </div>
+      <div class="fila-total total-final">
+        <span>TOTAL:</span>
+        <span id="txtTotal">$0</span>
+      </div>
+    </div>
+
+    <h2>Condiciones Comerciales</h2>
+    <div class="grid-condiciones">
+      <div class="cond-item">
+        <label>Validez Oferta</label>
+        <select>
+          <option value="15 días">15 días</option>
+          <option value="5 días">5 días</option>
+          <option value="10 días">10 días</option>
+          <option value="30 días">30 días</option>
+        </select>
+      </div>
+
+      <div class="cond-item">
+        <label>Entrega</label>
+        <select>
+          <option value="Inmediata">Inmediata</option>
+          <option value="2-3 días hábiles">2-3 días hábiles</option>
+          <option value="5 días hábiles">5 días hábiles</option>
+          <option value="7-10 días hábiles">7-10 días hábiles</option>
+          <option value="A convenir">A convenir</option>
+        </select>
+      </div>
+      
+      <div class="cond-item">
+        <label>Forma de Pago</label>
+        <select>
+          <option value="Contado / Transf.">Contado / Transf.</option>
+          <option value="Crédito 30 Días">Crédito 30 Días</option>
+          <option value="50% Pie / 50% Final">50% Pie / 50% Final</option>
+          <option value="Orden de Compra">Orden de Compra</option>
+        </select>
+      </div>
+      
+      <div class="cond-item">
+        <label>Garantía</label>
+        <select>
+          <option value="12 Meses (1 Año)">12 Meses (1 Año)</option>
+          <option value="6 Meses">6 Meses</option>
+          <option value="3 Meses">3 Meses</option>
+          <option value="24 Meses (2 Años)">24 Meses (2 Años)</option>
+          <option value="A convenir">A convenir</option>
+        </select>
+      </div>
+
+    </div>
+
+    <div class="obs-section">
+      <label>Observaciones</label>
+      <textarea id="obs" placeholder="Detalles adicionales..." rows="1"></textarea>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  // 4. LINEA 2: Registra el Service Worker al final del script
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('./service-worker.js')
+        .then(registration => {
+          console.log('ServiceWorker registrado con éxito. Modo Offline activado.');
+        })
+        .catch(error => {
+          console.log('Fallo de registro de ServiceWorker: ', error);
+        });
+    });
+  }
+
+  // CÓDIGO DE FUNCIONALIDAD EXISTENTE
+  const hoy = new Date();
+  const yyyy = hoy.getFullYear();
+  const mm = String(hoy.getMonth() + 1).padStart(2, '0');
+  const dd = String(hoy.getDate()).padStart(2, '0');
+  const fechaDefault = `${yyyy}-${mm}-${dd}`;
+
+  document.getElementById('fechaInput').value = fechaDefault;
+  
+  const formatoMoneda = new Intl.NumberFormat('es-CL', {
+    style: 'currency', currency: 'CLP', minimumFractionDigits: 0
+  });
+
+  function calcular() {
+    let sumaNeto = 0;
+    document.querySelectorAll('.fila').forEach(fila => {
+      const cant = parseFloat(fila.querySelector('.cant').value) || 0;
+      const precio = parseFloat(fila.querySelector('.precio').value) || 0;
+      const total = cant * precio;
+      fila.querySelector('.subtotal').innerText = formatoMoneda.format(total);
+      sumaNeto += total;
+    });
+    const iva = sumaNeto * 0.19;
+    document.getElementById('txtNeto').innerText = formatoMoneda.format(sumaNeto);
+    document.getElementById('txtIva').innerText = formatoMoneda.format(iva);
+    document.getElementById('txtTotal').innerText = formatoMoneda.format(sumaNeto + iva);
+  }
+
+  function agregarFila() {
+    const tbody = document.getElementById('tablaCuerpo');
+    const tr = document.createElement('tr');
+    tr.className = 'fila';
+    tr.innerHTML = `
+      <td><input class="desc" type="text" placeholder="Descripción"></td>
+      <td><input class="cant text-right" type="number" value="1" oninput="calcular()"></td>
+      <td><input class="precio text-right" type="number" value="0" oninput="calcular()"></td>
+      <td class="text-right"><span class="subtotal">$0</span></td>
+      <td><button class="btn-borrar" onclick="borrar(this)">x</button></td>
+    `;
+    
+    tbody.appendChild(tr);
+
+    const hoja = document.getElementById('hoja');
+    // Sólo aplicamos el anti-desborde si estamos en una pantalla grande (simulando PC/impresión)
+    if (hoja.scrollHeight > hoja.clientHeight && window.matchMedia("screen and (min-width: 769px)").matches) {
+       tr.remove();
+       alert("⚠️ Límite de hoja alcanzado. No puedes agregar más ítems en este presupuesto de una sola plana.");
+    }
+
+    calcular();
+  }
+
+  function borrar(btn) {
+    const filas = document.querySelectorAll('.fila');
+    if (filas.length > 1) {
+      btn.closest('tr').remove();
+      calcular();
+    }
+  }
+  
+  window.onload = calcular;
+</script>
+
+</body>
+</html>
