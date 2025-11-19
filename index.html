@@ -133,6 +133,21 @@
   }
   .btn-azul { background: #004a99; color: white; }
   .btn-gris { background: white; color: #333; }
+  
+  /* --- ESTILO AÑADIDO PARA EL BOTÓN DE GUARDAR --- */
+  .btn-guardar { 
+      background: #38a169; /* Verde */ 
+      color: white; 
+      padding: 8px 12px; 
+      cursor: pointer; 
+      border: none; 
+      border-radius: 4px; 
+      font-weight: bold; 
+      box-shadow: 0 2px 5px rgba(0,0,0,0.2); 
+      font-size: 12px;
+  }
+  /* ----------------------------------------------- */
+
   .btn-borrar { 
     background: #cc0000; color: white; width: 20px; height: 20px; 
     padding: 0; border-radius: 3px; font-size: 10px; 
@@ -172,7 +187,7 @@
       overflow: hidden; 
     }
 
-    .botonera, .btn-borrar { display: none !important; }
+    .botonera, .btn-borrar, .btn-guardar { display: none !important; } /* Ocultar botón Guardar en impresión */
     
     input, textarea, td input, select, .fecha-box input {
       background: transparent !important; border: none !important; padding: 0 !important;
@@ -193,7 +208,7 @@
 
 <div class="botonera">
   <button class="btn-gris" onclick="agregarFila()">+ Ítem</button>
-  <button class="btn-azul" onclick="window.print()">Imprimir PDF</button>
+  <button class="btn-guardar" onclick="guardarCotizacion()">Guardar y N°</button> <button class="btn-azul" onclick="window.print()">Imprimir PDF</button>
 </div>
 
 <div class="documento" id="hoja">
@@ -336,7 +351,7 @@
 </div>
 
 <script>
-  // 4. LINEA 2: Registra el Service Worker al final del script
+  // 1. REGISTRO PWA (SERVICE WORKER)
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
       navigator.serviceWorker.register('./service-worker.js')
@@ -349,7 +364,13 @@
     });
   }
 
-  // CÓDIGO DE FUNCIONALIDAD EXISTENTE
+  // =================================================================
+  // ⚠️ 2. PEGA AQUÍ LA URL ÚNICA DE TU APPS SCRIPT (REEMPLAZA EL TEXTO COMPLETO)
+  // =================================================================
+  const APPS_SCRIPT_URL = '[PEGAR AQUÍ TU URL DE GOOGLE APPS SCRIPT, EJ: https://script.google.com/macros/s/AKfycb.../exec]'; 
+  // =================================================================
+
+  // 3. Funciones de Configuración y Cálculos
   const hoy = new Date();
   const yyyy = hoy.getFullYear();
   const mm = String(hoy.getMonth() + 1).padStart(2, '0');
@@ -357,7 +378,8 @@
   const fechaDefault = `${yyyy}-${mm}-${dd}`;
 
   document.getElementById('fechaInput').value = fechaDefault;
-  
+
+  // Formato chileno sin decimales
   const formatoMoneda = new Intl.NumberFormat('es-CL', {
     style: 'currency', currency: 'CLP', minimumFractionDigits: 0
   });
@@ -410,6 +432,104 @@
   }
   
   window.onload = calcular;
+
+
+  // =================================================================
+  // 4. FUNCIÓN PARA GUARDAR DATOS EN GOOGLE SHEETS
+  // =================================================================
+
+  function guardarCotizacion() {
+    // Validación: Verifica que se haya pegado la URL real
+    if (APPS_SCRIPT_URL.includes('https://script.google.com/macros/s/AKfycbyI0HWRDGfDolrUO6lODH7Xw-aqNsx6zgZLJEB1GaeBv_S5sOxfmEwYn2DSUHaICSCqLQ/exec')) {
+      alert("ADVERTENCIA: Debes pegar la URL de tu Google Apps Script en la línea 441 del código. El guardado no funcionará hasta que lo hagas.");
+      return;
+    }
+
+    // A. Recolectar Información del Cliente (5 campos de input en .grid-cliente)
+    const clienteInputs = document.querySelectorAll('.grid-cliente input');
+    const clienteData = {
+      nombre: clienteInputs[0].value || 'Sin Nombre', // Empresa / Cliente
+      rut: clienteInputs[1].value || 'Sin RUT',      // RUT
+      contacto: clienteInputs[2].value || 'N/A',      // Contacto
+      email: clienteInputs[3].value || 'N/A',         // Email
+      telefono: clienteInputs[4].value || 'N/A'       // Teléfono
+    };
+
+    // B. Recolectar Ítems
+    const itemsArray = [];
+    document.querySelectorAll('.fila').forEach(fila => {
+      const desc = fila.querySelector('.desc').value;
+      // Usamos parseInt o parseFloat y eliminamos el formato de moneda si se aplica
+      const cant = parseFloat(fila.querySelector('.cant').value);
+      const precio = parseFloat(fila.querySelector('.precio').value);
+
+      if (desc && (cant > 0 || precio > 0)) {
+          itemsArray.push({
+              descripcion: desc,
+              cantidad: cant,
+              precio_unitario: precio
+          });
+      }
+    });
+
+    if (itemsArray.length === 0) {
+        alert("Añade al menos un ítem con descripción y precio antes de guardar.");
+        return;
+    }
+
+    // C. Recolectar Totales y Condiciones
+    // Quitar el '$' y los puntos de miles (formato Moneda) para guardar solo números
+    const totales = {
+      neto: document.getElementById('txtNeto').innerText.replace(/\$|\./g, ''), 
+      iva: document.getElementById('txtIva').innerText.replace(/\$|\./g, ''),
+      total: document.getElementById('txtTotal').innerText.replace(/\$|\./g, '')
+    };
+    
+    const condicionesArray = [];
+    document.querySelectorAll('.grid-condiciones select').forEach(select => {
+      condicionesArray.push(select.value);
+    });
+    
+    // D. Construir el objeto JSON final a enviar
+    const payload = {
+      cliente: clienteData,
+      items: itemsArray,
+      condiciones: condicionesArray.join(' | '), // Unir las condiciones en una sola cadena
+      observaciones: document.getElementById('obs').value || 'Sin observaciones',
+      neto: totales.neto,
+      iva: totales.iva,
+      total: totales.total
+    };
+
+    // E. Control de botón y envío
+    const btnGuardar = document.querySelector('.btn-guardar');
+    btnGuardar.disabled = true;
+    btnGuardar.innerText = 'Guardando...';
+
+    fetch(APPS_SCRIPT_URL, {
+      method: 'POST',
+      mode: 'cors', 
+      cache: 'no-cache',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.estado === 'éxito') {
+        alert(`✅ ¡Cotización N° ${data.numeroAsignado} guardada con éxito!\nRevisa tu Hoja de Cálculo.`);
+      } else {
+        alert(`❌ ERROR: ${data.mensaje}`);
+      }
+    })
+    .catch(error => {
+      alert('❌ Error de conexión. Revisa la consola para más detalles o que la URL de Apps Script sea correcta y esté publicada como "Cualquier persona".');
+      console.error('Fetch Error:', error);
+    })
+    .finally(() => {
+      btnGuardar.disabled = false;
+      btnGuardar.innerText = 'Guardar y N°';
+    });
+  }
 </script>
 
 </body>
