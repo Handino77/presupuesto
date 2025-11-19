@@ -208,7 +208,8 @@
 
 <div class="botonera">
   <button class="btn-gris" onclick="agregarFila()">+ Ítem</button>
-  <button class="btn-guardar" onclick="guardarCotizacion()">Guardar y N°</button> <button class="btn-azul" onclick="window.print()">Imprimir PDF</button>
+  <button class="btn-guardar" onclick="guardarCotizacion()">Guardar y N°</button>
+  <button class="btn-azul" onclick="window.print()">Imprimir PDF</button>
 </div>
 
 <div class="documento" id="hoja">
@@ -364,13 +365,7 @@
     });
   }
 
-  // =================================================================
-  // ⚠️ 2. PEGA AQUÍ LA URL ÚNICA DE TU APPS SCRIPT (REEMPLAZA EL TEXTO COMPLETO)
-  // =================================================================
-  const APPS_SCRIPT_URL = '[PEGAR AQUÍ TU URL DE GOOGLE APPS SCRIPT, EJ: https://script.google.com/macros/s/AKfycb.../exec]'; 
-  // =================================================================
-
-  // 3. Funciones de Configuración y Cálculos
+  // CÓDIGO DE FUNCIONALIDAD EXISTENTE
   const hoy = new Date();
   const yyyy = hoy.getFullYear();
   const mm = String(hoy.getMonth() + 1).padStart(2, '0');
@@ -378,8 +373,7 @@
   const fechaDefault = `${yyyy}-${mm}-${dd}`;
 
   document.getElementById('fechaInput').value = fechaDefault;
-
-  // Formato chileno sin decimales
+  
   const formatoMoneda = new Intl.NumberFormat('es-CL', {
     style: 'currency', currency: 'CLP', minimumFractionDigits: 0
   });
@@ -435,15 +429,17 @@
 
 
   // =================================================================
-  // 4. FUNCIÓN PARA GUARDAR DATOS EN GOOGLE SHEETS
+  // ⚠️ 2. URL ÚNICA DE TU APPS SCRIPT (YA PEGADA Y VALIDADA)
+  // =================================================================
+  const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyI0HWRDGfDolrUO6lODH7Xw-aqNsx6zgZLJEB1GaeBv_S5sOxfmEwYn2DSUHaICSCqLQ/exec'; 
+  // =================================================================
+
+  // =================================================================
+  // 4. FUNCIÓN PARA GUARDAR DATOS EN GOOGLE SHEETS (CORREGIDA)
   // =================================================================
 
   function guardarCotizacion() {
-    // Validación: Verifica que se haya pegado la URL real
-    if (APPS_SCRIPT_URL.includes('https://script.google.com/macros/s/AKfycbyI0HWRDGfDolrUO6lODH7Xw-aqNsx6zgZLJEB1GaeBv_S5sOxfmEwYn2DSUHaICSCqLQ/exec')) {
-      alert("ADVERTENCIA: Debes pegar la URL de tu Google Apps Script en la línea 441 del código. El guardado no funcionará hasta que lo hagas.");
-      return;
-    }
+    // 🛑 La validación incoherente ha sido eliminada. El script continuará. 🛑
 
     // A. Recolectar Información del Cliente (5 campos de input en .grid-cliente)
     const clienteInputs = document.querySelectorAll('.grid-cliente input');
