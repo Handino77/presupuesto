@@ -505,31 +505,32 @@
   // =================================================================
 
 async function guardarCotizacion() {
-    const url = "https://script.google.com/macros/s/AKfycbykT4fMvnP4YqEmYaHmToWSWfvYncdTRA0rZ-hsw0eyP4jyQ-pZEvxREUJhdvrDbUZ9_g/exec"; // <--- Reemplaza aquí tu URL /exec
+    const url = "https://script.google.com/macros/s/AKfycbykT4fMvnP4YqEmYaHmToWSWfvYncdTRA0rZ-hsw0eyP4jyQ-pZEvxREUJhdvrDbUZ9_g/exec";
 
     try {
-        // 1. Obtener datos del cliente
-        const nombre = document.getElementById("clienteNombre").value.trim();
-        const rut = document.getElementById("clienteRUT").value.trim();
+        // === 1. Datos del cliente ===
+        const nombre = document.getElementById("nombreCliente").value.trim();
+        const rut = document.getElementById("rutCliente").value.trim();
+        const correo = document.getElementById("correoCliente").value.trim();
+        const telefono = document.getElementById("telefonoCliente").value.trim();
 
         if (!nombre || !rut) {
-            alert("Debe ingresar nombre y RUT del cliente.");
+            alert("Debe ingresar al menos el Nombre y el RUT del cliente.");
             return;
         }
 
-        // 2. Obtener items desde la tabla
-        const tabla = document.getElementById("tablaItems");
-        const filas = tabla.querySelectorAll("tbody tr");
-        const items = [];
+        // === 2. Ítems desde la tabla ===
+        const filas = document.querySelectorAll("#tablaItems tbody tr");
+        const itemsFinales = [];
 
         filas.forEach(fila => {
-            const descripcion = fila.querySelector(".item-descripcion").value;
-            const cantidad = parseFloat(fila.querySelector(".item-cantidad").value);
-            const precio = parseFloat(fila.querySelector(".item-precio").value);
-            const total = cantidad * precio;
+            const descripcion = fila.querySelector(".descripcion").value.trim();
+            const cantidad = parseFloat(fila.querySelector(".cantidad").value) || 0;
+            const precio = parseFloat(fila.querySelector(".precio").value) || 0;
+            const total = parseFloat(fila.querySelector(".total").value) || 0;
 
-            if (descripcion.trim() !== "") {
-                items.push({
+            if (descripcion !== "" && cantidad > 0 && precio > 0) {
+                itemsFinales.push({
                     descripcion: descripcion,
                     cantidad: cantidad,
                     precio: precio,
@@ -538,65 +539,55 @@ async function guardarCotizacion() {
             }
         });
 
-        if (items.length === 0) {
-            alert("Debe agregar al menos un ítem.");
+        if (itemsFinales.length === 0) {
+            alert("Debe agregar al menos un ítem válido.");
             return;
         }
 
-        // 3. Obtener totales
-        const neto = parseInt(document.getElementById("totalNeto").textContent) || 0;
-        const iva = parseInt(document.getElementById("totalIVA").textContent) || 0;
-        const total = parseInt(document.getElementById("totalFinal").textContent) || 0;
+        // === 3. Totales ===
+        const neto = parseInt(document.getElementById("neto").textContent) || 0;
+        const iva = parseInt(document.getElementById("iva").textContent) || 0;
+        const total = parseInt(document.getElementById("total").textContent) || 0;
 
-        // 4. Obtener condiciones
-        const condiciones = document.getElementById("condicionesGenerales").value.trim();
+        // === 4. Condiciones ===
+        const condiciones = document.getElementById("condiciones").value.trim();
 
-        // 5. Construir JSON a enviar
+        // === 5. Construir JSON final ===
         const data = {
             cliente: {
                 nombre: nombre,
-                rut: rut
+                rut: rut,
+                correo: correo,
+                telefono: telefono
             },
-            items: items,
+            items: itemsFinales,
             neto: neto,
             iva: iva,
             total: total,
             condiciones: condiciones
         };
 
-        // 6. Enviar al Apps Script
+        // === 6. Enviar al Apps Script ===
         const response = await fetch(url, {
             method: "POST",
-            mode: "cors",
-            headers: {
-                "Content-Type": "application/json"
-            },
+            headers: { "Content-Type": "application/json" },
             body: JSON.stringify(data)
         });
 
         const result = await response.json();
 
         if (result.estado === "éxito") {
-            alert("Cotización guardada correctamente.\nN° asignado: " + result.numeroAsignado);
-
-            // Si quieres limpiar, descomenta:
-            /*
-            document.getElementById("clienteNombre").value = "";
-            document.getElementById("clienteRUT").value = "";
-            document.getElementById("condicionesGenerales").value = "";
-            document.querySelector("#tablaItems tbody").innerHTML = "";
-            actualizarTotales();
-            agregarFilaItem();
-            */
+            alert("Cotización guardada exitosamente.\nN° asignado: " + result.numeroAsignado);
         } else {
             alert("Error al guardar: " + result.mensaje);
         }
 
     } catch (error) {
-        alert("Error inesperado: " + error.message);
         console.error(error);
+        alert("Error inesperado: " + error.message);
     }
 }
+
 
 // Carga inicial
 window.onload = function() {
@@ -614,6 +605,7 @@ window.onload = function() {
 
 </body>
 </html>
+
 
 
 
