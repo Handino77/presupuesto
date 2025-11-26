@@ -504,91 +504,106 @@
   // FUNCIÓN PARA GUARDAR DATOS EN GOOGLE SHEETS
   // =================================================================
 
-  function guardarCotizacion() {
-    // A. Recolectar Información del Cliente 
-    const clienteInputs = document.querySelectorAll('.grid-cliente input');
-    const clienteData = {
-      nombre: clienteInputs[0].value || 'Sin Nombre',
-      rut: clienteInputs[1].value || 'Sin RUT',     
-      contacto: clienteInputs[2].value || 'N/A',     
-      email: clienteInputs[3].value || 'N/A',        
-      telefono: clienteInputs[4].value || 'N/A'      
-    };
+async function guardarCotizacion() {
+    const url = "URL_DEL_SCRIPT"; // <--- Reemplaza aquí tu URL /exec
 
-    // B. Recolectar Ítems
-    const itemsArray = [];
-    document.querySelectorAll('.fila').forEach(fila => {
-      const desc = fila.querySelector('.desc').value;
-      const cant = parseFloat(fila.querySelector('.cant').value);
-      const precio = parseFloat(fila.querySelector('.precio').value);
+    try {
+        // 1. Obtener datos del cliente
+        const nombre = document.getElementById("clienteNombre").value.trim();
+        const rut = document.getElementById("clienteRUT").value.trim();
 
-      if (desc && (cant > 0 || precio > 0)) {
-          itemsArray.push({
-              descripcion: desc,
-              cantidad: cant,
-              precio_unitario: precio
-          });
-      }
-    });
+        if (!nombre || !rut) {
+            alert("Debe ingresar nombre y RUT del cliente.");
+            return;
+        }
 
-    if (itemsArray.length === 0) {
-        alert("Añade al menos un ítem con descripción y precio antes de guardar.");
-        return;
+        // 2. Obtener items desde la tabla
+        const tabla = document.getElementById("tablaItems");
+        const filas = tabla.querySelectorAll("tbody tr");
+        const items = [];
+
+        filas.forEach(fila => {
+            const descripcion = fila.querySelector(".item-descripcion").value;
+            const cantidad = parseFloat(fila.querySelector(".item-cantidad").value);
+            const precio = parseFloat(fila.querySelector(".item-precio").value);
+            const total = cantidad * precio;
+
+            if (descripcion.trim() !== "") {
+                items.push({
+                    descripcion: descripcion,
+                    cantidad: cantidad,
+                    precio: precio,
+                    total: total
+                });
+            }
+        });
+
+        if (items.length === 0) {
+            alert("Debe agregar al menos un ítem.");
+            return;
+        }
+
+        // 3. Obtener totales
+        const neto = parseInt(document.getElementById("totalNeto").textContent) || 0;
+        const iva = parseInt(document.getElementById("totalIVA").textContent) || 0;
+        const total = parseInt(document.getElementById("totalFinal").textContent) || 0;
+
+        // 4. Obtener condiciones
+        const condiciones = document.getElementById("condicionesGenerales").value.trim();
+
+        // 5. Construir JSON a enviar
+        const data = {
+            cliente: {
+                nombre: nombre,
+                rut: rut
+            },
+            items: items,
+            neto: neto,
+            iva: iva,
+            total: total,
+            condiciones: condiciones
+        };
+
+        // 6. Enviar al Apps Script
+        const response = await fetch(url, {
+            method: "POST",
+            mode: "cors",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(data)
+        });
+
+        const result = await response.json();
+
+        if (result.estado === "éxito") {
+            alert("Cotización guardada correctamente.\nN° asignado: " + result.numeroAsignado);
+
+            // Si quieres limpiar, descomenta:
+            /*
+            document.getElementById("clienteNombre").value = "";
+            document.getElementById("clienteRUT").value = "";
+            document.getElementById("condicionesGenerales").value = "";
+            document.querySelector("#tablaItems tbody").innerHTML = "";
+            actualizarTotales();
+            agregarFilaItem();
+            */
+        } else {
+            alert("Error al guardar: " + result.mensaje);
+        }
+
+    } catch (error) {
+        alert("Error inesperado: " + error.message);
+        console.error(error);
     }
+}
 
-    // C. Recolectar Totales y Condiciones
-    const totales = {
-      // Limpiamos los textos de moneda para enviar solo números
-      neto: document.getElementById('txtNeto').innerText.replace(/\$|\./g, ''), 
-      iva: document.getElementById('txtIva').innerText.replace(/\$|\./g, ''),
-      total: document.getElementById('txtTotal').innerText.replace(/\$|\./g, '')
-    };
-    
-    const condicionesArray = [];
-    document.querySelectorAll('.grid-condiciones select').forEach(select => {
-      condicionesArray.push(select.value);
-    });
-    
-    // D. Construir el objeto JSON final a enviar
-    const payload = {
-      cliente: clienteData,
-      items: itemsArray,
-      condiciones: condicionesArray.join(' | '),
-      observaciones: document.getElementById('obs').value || 'Sin observaciones',
-      neto: totales.neto,
-      iva: totales.iva,
-      total: totales.total
-    };
+// Carga inicial
+window.onload = function() {
+    calcular();
+    fetchProducts(); // Cargar productos al iniciar la página
+}
 
-    // E. Control de botón y envío
-    const btnGuardar = document.querySelector('.btn-guardar');
-    btnGuardar.disabled = true;
-    btnGuardar.innerText = 'Guardando...';
-
-    fetch(APPS_SCRIPT_URL, {
-      method: 'POST',
-      mode: 'cors', 
-      cache: 'no-cache',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    })
-    .then(response => response.json())
-    .then(data => {
-      if (data.estado === 'éxito') {
-        alert(`✅ ¡Cotización N° ${data.numeroAsignado} guardada con éxito!\nRevisa tu Hoja de Cálculo.`);
-      } else {
-        alert(`❌ ERROR: ${data.mensaje}`);
-      }
-    })
-    .catch(error => {
-      alert('❌ Error de conexión. Revisa la consola para más detalles o que la URL de Apps Script sea correcta y esté publicada como "Cualquier persona".');
-      console.error('Fetch Error:', error);
-    })
-    .finally(() => {
-      btnGuardar.disabled = false;
-      btnGuardar.innerText = 'Guardar y N°';
-    });
-  }
 
   // Carga inicial y carga de productos
   window.onload = function() {
@@ -599,6 +614,7 @@
 
 </body>
 </html>
+
 
 
 
