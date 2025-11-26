@@ -371,205 +371,143 @@
   // 2. URL ÚNICA DE TU APPS SCRIPT
   // (Asegúrate de que esta URL sea la correcta y esté publicada como "Cualquier persona")
   // =================================================================
-  const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbykT4fMvnP4YqEmYaHmToWSWfvYncdTRA0rZ-hsw0eyP4jyQ-pZEvxREUJhdvrDbUZ9_g/exec'; 
-  // =================================================================
+  <script>
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwkE_MCH0Gwjl-kyXQ8AjaeNH28sFHN40iaSmsIakoKL8Wyz4GNJruY_wKUJjqBKryvHQ/exec";
 
-  // NUEVAS VARIABLES PARA PRODUCTOS
-  let cachedProducts = [];
-
-  // 3. Funciones de Configuración y Cálculos
-  const hoy = new Date();
-  const yyyy = hoy.getFullYear();
-  const mm = String(hoy.getMonth() + 1).padStart(2, '0');
-  const dd = String(hoy.getDate()).padStart(2, '0');
-  const fechaDefault = `${yyyy}-${mm}-${dd}`;
-
-  document.getElementById('fechaInput').value = fechaDefault;
-  
-  const formatoMoneda = new Intl.NumberFormat('es-CL', {
-    style: 'currency', currency: 'CLP', minimumFractionDigits: 0
-  });
-
-  function calcular() {
-    let sumaNeto = 0;
-    document.querySelectorAll('.fila').forEach(fila => {
-      const cant = parseFloat(fila.querySelector('.cant').value) || 0;
-      const precio = parseFloat(fila.querySelector('.precio').value) || 0;
-      const total = cant * precio;
-      fila.querySelector('.subtotal').innerText = formatoMoneda.format(total);
-      sumaNeto += total;
-    });
-    const iva = sumaNeto * 0.19;
-    document.getElementById('txtNeto').innerText = formatoMoneda.format(sumaNeto);
-    document.getElementById('txtIva').innerText = formatoMoneda.format(iva);
-    document.getElementById('txtTotal').innerText = formatoMoneda.format(sumaNeto + iva);
-  }
-
-  function agregarFila() {
-    const tbody = document.getElementById('tablaCuerpo');
-    const tr = document.createElement('tr');
-    tr.className = 'fila';
-    tr.innerHTML = `
-      <td><input class="desc" list="product-list" type="text" placeholder="Descripción" onchange="autofillPrice(this)"></td>
-      <td><input class="cant text-right" type="number" value="1" oninput="calcular()"></td>
-      <td><input class="precio text-right" type="number" value="0" oninput="calcular()"></td>
-      <td class="text-right"><span class="subtotal">$0</span></td>
-      <td><button class="btn-borrar" onclick="borrar(this)">x</button></td>
-    `;
-    
-    tbody.appendChild(tr);
-
-    const hoja = document.getElementById('hoja');
-    // Sólo aplicamos el anti-desborde si estamos en una pantalla grande (simulando PC/impresión)
-    if (hoja.scrollHeight > hoja.clientHeight && window.matchMedia("screen and (min-width: 769px)").matches) {
-       tr.remove();
-       alert("⚠️ Límite de hoja alcanzado. No puedes agregar más ítems en este presupuesto de una sola plana.");
-    }
-
-    calcular();
-  }
-
-  function borrar(btn) {
-    const filas = document.querySelectorAll('.fila');
-    if (filas.length > 1) {
-      btn.closest('tr').remove();
-      calcular();
-    }
-  }
-
-  // =================================================================
-  // NUEVAS FUNCIONES DE PRODUCTOS
-  // =================================================================
-
-  /**
-   * Llena el <datalist> con los productos cargados.
-   */
-  function updateDatalist() {
-      const datalist = document.getElementById('product-list');
-      datalist.innerHTML = ''; 
-      cachedProducts.forEach(product => {
-          const option = document.createElement('option');
-          option.value = product.descripcion; 
-          datalist.appendChild(option);
-      });
-  }
-
-  /**
-   * Carga el precio neto automáticamente al seleccionar un producto.
-   * @param {HTMLElement} inputElement - El input de descripción que cambió.
-   */
-  function autofillPrice(inputElement) {
-      const selectedDescription = inputElement.value.trim();
-      // Encuentra el producto coincidente en la caché
-      const matchingProduct = cachedProducts.find(p => p.descripcion.trim() === selectedDescription);
-      
-      if (matchingProduct) {
-          const fila = inputElement.closest('.fila');
-          const priceInput = fila.querySelector('.precio');
-          
-          // Aseguramos que el valor sea un número limpio
-          const price = parseFloat(matchingProduct.precio) || 0;
-
-          priceInput.value = price;
-          calcular(); // Recalcula los totales
-      }
-  }
-
-
-  /**
-   * Llama al Apps Script (doGet) para obtener la lista de productos.
-   */
-  async function fetchProducts() {
-      // Intentar cargar solo si no están cargados
-      if (cachedProducts.length > 0) return; 
-
-      try {
-          // Llama al Apps Script. doGet responderá con el JSON de productos.
-          const response = await fetch(APPS_SCRIPT_URL);
-          const data = await response.json();
-          
-          if (data.estado === 'éxito') {
-              cachedProducts = data.productos;
-              updateDatalist(); // Llenar el datalist una vez que los datos estén listos
-              console.log('✅ Productos cargados:', cachedProducts.length);
-          } else {
-              console.error("❌ Error al cargar productos:", data.mensaje);
-          }
-      } catch (error) {
-          console.error("❌ Error de red al cargar productos. Revisa la URL y la implementación de doGet.", error);
-      }
-  }
-
-  // =================================================================
-  // FUNCIÓN PARA GUARDAR DATOS EN GOOGLE SHEETS
-  // =================================================================
-
-async function guardarCotizacion() {
-    const url = "https://script.google.com/macros/s/AKfycbykT4fMvnP4YqEmYaHmToWSWfvYncdTRA0rZ-hsw0eyP4jyQ-pZEvxREUJhdvrDbUZ9_g/exec";
-
+/* ============================
+   CARGAR LISTA DE PRODUCTOS
+   ============================ */
+async function fetchProducts() {
     try {
-        // === 1. Datos del cliente ===
-        const nombre = document.getElementById("nombreCliente").value.trim();
-        const rut = document.getElementById("rutCliente").value.trim();
-        const correo = document.getElementById("correoCliente").value.trim();
-        const telefono = document.getElementById("telefonoCliente").value.trim();
+        const response = await fetch(SCRIPT_URL);
+        const data = await response.json();
 
-        if (!nombre || !rut) {
-            alert("Debe ingresar al menos el Nombre y el RUT del cliente.");
+        if (data.estado !== "éxito") {
+            alert("Error al cargar productos: " + data.mensaje);
             return;
         }
 
-        // === 2. Ítems desde la tabla ===
-        const filas = document.querySelectorAll("#tablaItems tbody tr");
-        const itemsFinales = [];
+        const lista = document.getElementById("listaProductos");
+        lista.innerHTML = "";
 
-        filas.forEach(fila => {
-            const descripcion = fila.querySelector(".descripcion").value.trim();
-            const cantidad = parseFloat(fila.querySelector(".cantidad").value) || 0;
-            const precio = parseFloat(fila.querySelector(".precio").value) || 0;
-            const total = parseFloat(fila.querySelector(".total").value) || 0;
+        data.productos.forEach((p) => {
+            const option = document.createElement("option");
+            option.value = p.descripcion;
+            option.setAttribute("data-precio", p.precio);
+            lista.appendChild(option);
+        });
 
-            if (descripcion !== "" && cantidad > 0 && precio > 0) {
-                itemsFinales.push({
-                    descripcion: descripcion,
-                    cantidad: cantidad,
-                    precio: precio,
-                    total: total
-                });
+    } catch (err) {
+        alert("No se pudieron cargar los productos.");
+        console.error(err);
+    }
+}
+
+/* ============================
+   AGREGAR FILA A LA TABLA
+   ============================ */
+function agregarFilaItem() {
+    const tbody = document.querySelector("#tablaItems tbody");
+    const fila = document.createElement("tr");
+
+    fila.innerHTML = `
+        <td><input type="text" class="item-descripcion" list="listaProductos" onchange="setPrecioAutomatico(this)"></td>
+        <td><input type="number" class="item-cantidad" value="1" min="1" onchange="actualizarTotales()"></td>
+        <td><input type="number" class="item-precio" value="0" min="0" onchange="actualizarTotales()"></td>
+        <td class="item-total">0</td>
+        <td><button onclick="eliminarFila(this)">❌</button></td>
+    `;
+
+    tbody.appendChild(fila);
+}
+
+/* ============================
+   AUTOCARGAR PRECIO DESDE LISTA
+   ============================ */
+function setPrecioAutomatico(input) {
+    const descripcion = input.value.trim();
+    const precio = document.querySelector(`#listaProductos option[value="${descripcion}"]`)?.dataset.precio;
+
+    if (precio) {
+        input.closest("tr").querySelector(".item-precio").value = precio;
+    }
+
+    actualizarTotales();
+}
+
+/* ============================
+   ELIMINAR FILA
+   ============================ */
+function eliminarFila(btn) {
+    btn.closest("tr").remove();
+    actualizarTotales();
+}
+
+/* ============================
+   CALCULAR TOTALES
+   ============================ */
+function actualizarTotales() {
+    let neto = 0;
+
+    document.querySelectorAll("#tablaItems tbody tr").forEach((fila) => {
+        const cantidad = parseFloat(fila.querySelector(".item-cantidad").value) || 0;
+        const precio = parseFloat(fila.querySelector(".item-precio").value) || 0;
+        const total = cantidad * precio;
+
+        fila.querySelector(".item-total").textContent = total;
+        neto += total;
+    });
+
+    const iva = Math.round(neto * 0.19);
+    const totalFinal = neto + iva;
+
+    document.getElementById("totalNeto").textContent = neto;
+    document.getElementById("totalIVA").textContent = iva;
+    document.getElementById("totalFinal").textContent = totalFinal;
+}
+
+/* ============================
+   GUARDAR COTIZACIÓN
+   ============================ */
+async function guardarCotizacion() {
+    try {
+        const nombre = document.getElementById("clienteNombre").value.trim();
+        const rut = document.getElementById("clienteRUT").value.trim();
+
+        if (!nombre || !rut) {
+            alert("Debe ingresar nombre y RUT.");
+            return;
+        }
+
+        const items = [];
+        document.querySelectorAll("#tablaItems tbody tr").forEach((fila) => {
+            const descripcion = fila.querySelector(".item-descripcion").value.trim();
+            const cantidad = parseFloat(fila.querySelector(".item-cantidad").value);
+            const precio = parseFloat(fila.querySelector(".item-precio").value);
+            const total = cantidad * precio;
+
+            if (descripcion !== "") {
+                items.push({ descripcion, cantidad, precio, total });
             }
         });
 
-        if (itemsFinales.length === 0) {
-            alert("Debe agregar al menos un ítem válido.");
+        if (items.length === 0) {
+            alert("Debe agregar al menos un ítem.");
             return;
         }
 
-        // === 3. Totales ===
-        const neto = parseInt(document.getElementById("neto").textContent) || 0;
-        const iva = parseInt(document.getElementById("iva").textContent) || 0;
-        const total = parseInt(document.getElementById("total").textContent) || 0;
-
-        // === 4. Condiciones ===
-        const condiciones = document.getElementById("condiciones").value.trim();
-
-        // === 5. Construir JSON final ===
         const data = {
-            cliente: {
-                nombre: nombre,
-                rut: rut,
-                correo: correo,
-                telefono: telefono
-            },
-            items: itemsFinales,
-            neto: neto,
-            iva: iva,
-            total: total,
-            condiciones: condiciones
+            cliente: { nombre, rut },
+            items: items,
+            neto: parseInt(document.getElementById("totalNeto").textContent),
+            iva: parseInt(document.getElementById("totalIVA").textContent),
+            total: parseInt(document.getElementById("totalFinal").textContent),
+            condiciones: document.getElementById("condicionesGenerales").value.trim()
         };
 
-        // === 6. Enviar al Apps Script ===
-        const response = await fetch(url, {
+        const response = await fetch(SCRIPT_URL, {
             method: "POST",
+            mode: "cors",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(data)
         });
@@ -577,34 +515,31 @@ async function guardarCotizacion() {
         const result = await response.json();
 
         if (result.estado === "éxito") {
-            alert("Cotización guardada exitosamente.\nN° asignado: " + result.numeroAsignado);
+            alert("Cotización guardada. N°: " + result.numeroAsignado);
         } else {
-            alert("Error al guardar: " + result.mensaje);
+            alert("Error: " + result.mensaje);
         }
 
     } catch (error) {
-        console.error(error);
         alert("Error inesperado: " + error.message);
+        console.error(error);
     }
 }
 
-
-// Carga inicial
-window.onload = function() {
-    calcular();
-    fetchProducts(); // Cargar productos al iniciar la página
-}
-
-
-  // Carga inicial y carga de productos
-  window.onload = function() {
-      calcular();
-      fetchProducts(); // Cargar productos al iniciar la página
-  }
+/* ============================
+   INICIALIZACIÓN DE LA PÁGINA
+   ============================ */
+window.onload = function () {
+    fetchProducts();
+    agregarFilaItem();
+    actualizarTotales();
+};
 </script>
+
 
 </body>
 </html>
+
 
 
 
