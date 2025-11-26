@@ -353,19 +353,6 @@
 
 <datalist id="product-list"></datalist>
 
-<script>
-  // 1. REGISTRO PWA (SERVICE WORKER)
-  if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-      navigator.serviceWorker.register('./service-worker.js')
-        .then(registration => {
-          console.log('ServiceWorker registrado con éxito. Modo Offline activado.');
-        })
-        .catch(error => {
-          console.log('Fallo de registro de ServiceWorker: ', error);
-        });
-    });
-  }
 
   // =================================================================
   // 2. URL ÚNICA DE TU APPS SCRIPT
@@ -539,6 +526,7 @@ window.onload = function () {
 
 </body>
 </html>
+
 
 
 
