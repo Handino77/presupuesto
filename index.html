@@ -4,7 +4,6 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Presupuesto - Realtech SpA</title>
-<link rel="icon" type="image/png" href="logo_realtech.png">
 
 <link rel="manifest" href="./manifest.json">
 
@@ -180,33 +179,72 @@
 
   /* ESTILOS DE IMPRESIÓN */
   @media print {
-    @page { margin: 0mm !important; size: letter; }
-    body { margin: 0; padding: 0; background: white; }
+    @page { 
+      margin: 0mm !important; 
+      size: letter portrait; 
+    }
+    
+    html, body { 
+      margin: 0 !important; 
+      padding: 0 !important; 
+      background: white !important;
+      height: 100% !important;
+      overflow: hidden !important;
+    }
     
     .documento {
-      width: 100%; 
-      height: 27.94cm; 
-      max-width: 100%; 
-      box-shadow: none;
+      width: 21.59cm !important;
+      height: 27.94cm !important;
+      max-width: 100% !important;
+      max-height: 27.94cm !important;
+      box-shadow: none !important;
       padding: 1cm 1.5cm !important; 
-      margin: 0;
-      overflow: hidden; 
+      margin: 0 !important;
+      overflow: hidden !important;
+      page-break-after: avoid !important;
+      page-break-inside: avoid !important;
+      display: block !important;
     }
 
     .botonera, .btn-borrar, .btn-guardar, .notificacion { display: none !important; } 
     
     input, textarea, td input, select, .fecha-box input {
-      background: transparent !important; border: none !important; padding: 0 !important;
-      resize: none; appearance: none; -webkit-appearance: none;
+      background: transparent !important; 
+      border: none !important; 
+      padding: 0 !important;
+      resize: none !important; 
+      appearance: none !important; 
+      -webkit-appearance: none !important;
     }
-    .tabla-wrapper { overflow-x: hidden; } 
-    table { min-width: auto; }
-    input::placeholder { color: transparent; }
+    
+    .tabla-wrapper { 
+      overflow-x: hidden !important;
+      overflow-y: hidden !important;
+      max-height: none !important;
+    } 
+    
+    table { 
+      min-width: auto !important;
+      page-break-inside: avoid !important;
+    }
+    
+    tbody tr {
+      page-break-inside: avoid !important;
+      page-break-after: auto !important;
+    }
+    
+    input::placeholder { color: transparent !important; }
     .grid-condiciones { border: none; padding: 0; background: transparent; }
     h2, th { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     
     .logo-area { align-items: flex-start; }
     .titulo-doc h1 { font-size: 24px; }
+    
+    /* Footer fluido sin posición fija */
+    .footer-section {
+      position: relative !important;
+      margin-top: 10px !important;
+    }
   }
 </style>
 </head>
@@ -410,6 +448,13 @@
 
   function agregarFila() {
     const tbody = document.getElementById('tablaCuerpo');
+    
+    // Verificar si hay espacio antes de agregar
+    if (!verificarEspacio()) {
+      mostrarNotificacion('⚠️ No hay más espacio en la página. Límite alcanzado para mantener todo en una sola hoja.', 'error');
+      return;
+    }
+    
     const tr = document.createElement('tr');
     tr.className = 'fila';
     tr.innerHTML = `
@@ -420,7 +465,27 @@
       <td><button class="btn-borrar" onclick="borrar(this)">x</button></td>
     `;
     tbody.appendChild(tr);
-    calcular();
+    
+    // Verificar después de agregar
+    setTimeout(() => {
+      if (!verificarEspacio()) {
+        tr.remove();
+        mostrarNotificacion('⚠️ No hay más espacio en la página. Límite alcanzado.', 'error');
+      } else {
+        calcular();
+      }
+    }, 100);
+  }
+  
+  function verificarEspacio() {
+    const documento = document.getElementById('hoja');
+    const alturaMaxima = window.innerWidth >= 769 ? 1050 : 10000; // 27.94cm ≈ 1050px en escritorio
+    
+    // En móvil/tablet no verificamos límite
+    if (window.innerWidth < 769) return true;
+    
+    // En escritorio verificamos altura
+    return documento.scrollHeight <= alturaMaxima;
   }
 
   function borrar(btn) {
@@ -571,4 +636,3 @@
 
 </body>
 </html>
-
