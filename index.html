@@ -4,6 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Presupuesto - Realtech SpA</title>
+<link rel="icon" type="image/png" href="logo_realtech.png">
 
 <link rel="manifest" href="./manifest.json">
 
@@ -52,6 +53,7 @@
   .empresa-nombre { font-size: 16px; font-weight: bold; color: #004a99; display: block; }
   .titulo-doc { text-align: right; }
   .titulo-doc h1 { font-size: 20px; margin: 0; color: #004a99; }
+  .numero-cotizacion { font-size: 14px; font-weight: bold; color: #004a99; margin-bottom: 3px; }
   .fecha-box { font-size: 11px; margin-top: 5px; font-weight: bold; color: #333; }
   .fecha-box input {
     border: none; background: transparent; font-size: 11px; font-weight: bold; 
@@ -179,72 +181,33 @@
 
   /* ESTILOS DE IMPRESIÓN */
   @media print {
-    @page { 
-      margin: 0mm !important; 
-      size: letter portrait; 
-    }
-    
-    html, body { 
-      margin: 0 !important; 
-      padding: 0 !important; 
-      background: white !important;
-      height: 100% !important;
-      overflow: hidden !important;
-    }
+    @page { margin: 0mm !important; size: letter; }
+    body { margin: 0; padding: 0; background: white; }
     
     .documento {
-      width: 21.59cm !important;
-      height: 27.94cm !important;
-      max-width: 100% !important;
-      max-height: 27.94cm !important;
-      box-shadow: none !important;
+      width: 100%; 
+      height: 27.94cm; 
+      max-width: 100%; 
+      box-shadow: none;
       padding: 1cm 1.5cm !important; 
-      margin: 0 !important;
-      overflow: hidden !important;
-      page-break-after: avoid !important;
-      page-break-inside: avoid !important;
-      display: block !important;
+      margin: 0;
+      overflow: hidden; 
     }
 
     .botonera, .btn-borrar, .btn-guardar, .notificacion { display: none !important; } 
     
     input, textarea, td input, select, .fecha-box input {
-      background: transparent !important; 
-      border: none !important; 
-      padding: 0 !important;
-      resize: none !important; 
-      appearance: none !important; 
-      -webkit-appearance: none !important;
+      background: transparent !important; border: none !important; padding: 0 !important;
+      resize: none; appearance: none; -webkit-appearance: none;
     }
-    
-    .tabla-wrapper { 
-      overflow-x: hidden !important;
-      overflow-y: hidden !important;
-      max-height: none !important;
-    } 
-    
-    table { 
-      min-width: auto !important;
-      page-break-inside: avoid !important;
-    }
-    
-    tbody tr {
-      page-break-inside: avoid !important;
-      page-break-after: auto !important;
-    }
-    
-    input::placeholder { color: transparent !important; }
+    .tabla-wrapper { overflow-x: hidden; } 
+    table { min-width: auto; }
+    input::placeholder { color: transparent; }
     .grid-condiciones { border: none; padding: 0; background: transparent; }
     h2, th { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     
     .logo-area { align-items: flex-start; }
     .titulo-doc h1 { font-size: 24px; }
-    
-    /* Footer fluido sin posición fija */
-    .footer-section {
-      position: relative !important;
-      margin-top: 10px !important;
-    }
   }
 </style>
 </head>
@@ -273,6 +236,7 @@
       </div>
     </div>
     <div class="titulo-doc">
+      <div class="numero-cotizacion" id="numeroCotizacion">N° ---</div>
       <h1>Presupuesto</h1>
       <div class="fecha-box">
         Emisión: <input type="date" id="fechaInput">
@@ -284,11 +248,11 @@
   <div class="grid-cliente">
     <div class="campo full-width">
       <label>Cliente / Empresa</label>
-      <input type="text" id="clienteNombre" placeholder="Nombre del cliente...">
+      <input type="text" id="clienteNombre" list="clientes-list" placeholder="Nombre del cliente..." onchange="autocompletarCliente()">
     </div>
     <div class="campo">
       <label>RUT (Opcional)</label>
-      <input type="text" id="clienteRut" placeholder="XX.XXX.XXX-X">
+      <input type="text" id="clienteRut" placeholder="XX.XXX.XXX-X" oninput="formatearRut(this)">
     </div>
     <div class="campo">
       <label>Contacto</label>
@@ -397,6 +361,7 @@
 </div>
 
 <datalist id="product-list"></datalist>
+<datalist id="clientes-list"></datalist>
 
 <script>
   // ============================================
@@ -406,6 +371,9 @@
   // ============================================
 
   let cachedProducts = [];
+  let cachedClients = [];
+  let numeroActual = 0;
+  const MAX_ITEMS = 20;
 
   // Configuración inicial
   const hoy = new Date();
@@ -431,6 +399,23 @@
     }, 4000);
   }
 
+  // Formatear RUT automáticamente
+  function formatearRut(input) {
+    let valor = input.value.replace(/[^0-9kK]/g, '');
+    
+    if (valor.length === 0) {
+      input.value = '';
+      return;
+    }
+    
+    let cuerpo = valor.slice(0, -1);
+    let dv = valor.slice(-1).toUpperCase();
+    
+    cuerpo = cuerpo.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+    
+    input.value = cuerpo ? `${cuerpo}-${dv}` : '';
+  }
+
   function calcular() {
     let sumaNeto = 0;
     document.querySelectorAll('.fila').forEach(fila => {
@@ -448,10 +433,10 @@
 
   function agregarFila() {
     const tbody = document.getElementById('tablaCuerpo');
+    const filasActuales = tbody.querySelectorAll('.fila').length;
     
-    // Verificar si hay espacio antes de agregar
-    if (!verificarEspacio()) {
-      mostrarNotificacion('⚠️ No hay más espacio en la página. Límite alcanzado para mantener todo en una sola hoja.', 'error');
+    if (filasActuales >= MAX_ITEMS) {
+      mostrarNotificacion(`⚠️ Máximo ${MAX_ITEMS} ítems permitidos`, 'error');
       return;
     }
     
@@ -465,27 +450,7 @@
       <td><button class="btn-borrar" onclick="borrar(this)">x</button></td>
     `;
     tbody.appendChild(tr);
-    
-    // Verificar después de agregar
-    setTimeout(() => {
-      if (!verificarEspacio()) {
-        tr.remove();
-        mostrarNotificacion('⚠️ No hay más espacio en la página. Límite alcanzado.', 'error');
-      } else {
-        calcular();
-      }
-    }, 100);
-  }
-  
-  function verificarEspacio() {
-    const documento = document.getElementById('hoja');
-    const alturaMaxima = window.innerWidth >= 769 ? 1050 : 10000; // 27.94cm ≈ 1050px en escritorio
-    
-    // En móvil/tablet no verificamos límite
-    if (window.innerWidth < 769) return true;
-    
-    // En escritorio verificamos altura
-    return documento.scrollHeight <= alturaMaxima;
+    calcular();
   }
 
   function borrar(btn) {
@@ -506,6 +471,28 @@
     });
   }
 
+  function updateClientsList() {
+    const datalist = document.getElementById('clientes-list');
+    datalist.innerHTML = '';
+    cachedClients.forEach(cliente => {
+      const option = document.createElement('option');
+      option.value = cliente.nombre;
+      datalist.appendChild(option);
+    });
+  }
+
+  function autocompletarCliente() {
+    const nombreInput = document.getElementById('clienteNombre').value.trim();
+    const clienteEncontrado = cachedClients.find(c => c.nombre.trim() === nombreInput);
+    
+    if (clienteEncontrado) {
+      document.getElementById('clienteRut').value = clienteEncontrado.rut || '';
+      document.getElementById('clienteContacto').value = clienteEncontrado.contacto || '';
+      document.getElementById('clienteEmail').value = clienteEncontrado.email || '';
+      document.getElementById('clienteTelefono').value = clienteEncontrado.telefono || '';
+    }
+  }
+
   function autofillPrice(inputElement) {
     const selectedDescription = inputElement.value.trim();
     const matchingProduct = cachedProducts.find(p => p.descripcion.trim() === selectedDescription);
@@ -519,22 +506,32 @@
     }
   }
 
-  async function fetchProducts() {
-    if (cachedProducts.length > 0) return;
-
+  async function fetchData() {
     try {
       const response = await fetch(APPS_SCRIPT_URL);
       const data = await response.json();
       
       if (data.estado === 'éxito') {
-        cachedProducts = data.productos;
+        cachedProducts = data.productos || [];
+        cachedClients = data.clientes || [];
+        numeroActual = (data.ultimoNumero || 1000) + 1;
+        
         updateDatalist();
-        console.log('✅ Productos cargados:', cachedProducts.length);
+        updateClientsList();
+        document.getElementById('numeroCotizacion').textContent = `N° ${numeroActual}`;
+        
+        console.log('✅ Datos cargados:', {
+          productos: cachedProducts.length,
+          clientes: cachedClients.length,
+          numeroActual: numeroActual
+        });
       } else {
-        console.warn("⚠️ No hay productos o error:", data.mensaje);
+        console.warn("⚠️ Error al cargar datos:", data.mensaje);
+        mostrarNotificacion('⚠️ Error al cargar datos', 'error');
       }
     } catch (error) {
-      console.error("❌ Error al cargar productos:", error);
+      console.error("❌ Error al cargar datos:", error);
+      mostrarNotificacion('❌ Error de conexión con Google Sheets', 'error');
     }
   }
 
@@ -621,7 +618,7 @@
   // Carga inicial
   window.onload = function() {
     calcular();
-    fetchProducts();
+    fetchData();
   }
 
   // Service Worker (si tienes manifest.json)
