@@ -186,12 +186,15 @@
     
     .documento {
       width: 100%; 
-      height: 27.94cm; 
+      height: auto !important;
+      min-height: 0 !important;
+      max-height: 27.94cm;
       max-width: 100%; 
       box-shadow: none;
       padding: 1cm 1.5cm !important; 
       margin: 0;
-      overflow: hidden; 
+      overflow: hidden;
+      page-break-after: avoid;
     }
 
     .botonera, .btn-borrar, .btn-guardar, .notificacion { display: none !important; } 
@@ -272,10 +275,11 @@
     <table>
       <thead>
         <tr>
-          <th style="width:55%">Descripción</th>
+          <th style="width:45%">Descripción</th>
           <th style="width:10%" class="text-right">Cant.</th>
-          <th style="width:15%" class="text-right">P. Unit.</th>
-          <th style="width:20%" class="text-right">Total</th>
+          <th style="width:13%" class="text-right">P. Unit.</th>
+          <th style="width:10%" class="text-right">Desc.%</th>
+          <th style="width:17%" class="text-right">Total</th>
           <th style="width:20px"></th>
         </tr>
       </thead>
@@ -284,6 +288,7 @@
           <td><input class="desc" list="product-list" type="text" placeholder="Descripción del ítem" onchange="autofillPrice(this)"></td>
           <td><input class="cant text-right" type="number" value="1" oninput="calcular()"></td>
           <td><input class="precio text-right" type="number" value="0" oninput="calcular()"></td>
+          <td><input class="descuento text-right" type="number" value="0" min="0" max="100" oninput="calcular()"></td>
           <td class="text-right"><span class="subtotal">$0</span></td>
           <td><button class="btn-borrar" onclick="borrar(this)">x</button></td>
         </tr>
@@ -421,7 +426,12 @@
     document.querySelectorAll('.fila').forEach(fila => {
       const cant = parseFloat(fila.querySelector('.cant').value) || 0;
       const precio = parseFloat(fila.querySelector('.precio').value) || 0;
-      const total = cant * precio;
+      const descuento = parseFloat(fila.querySelector('.descuento').value) || 0;
+      
+      const subtotal = cant * precio;
+      const descuentoMonto = subtotal * (descuento / 100);
+      const total = subtotal - descuentoMonto;
+      
       fila.querySelector('.subtotal').innerText = formatoMoneda.format(total);
       sumaNeto += total;
     });
@@ -446,6 +456,7 @@
       <td><input class="desc" list="product-list" type="text" placeholder="Descripción" onchange="autofillPrice(this)"></td>
       <td><input class="cant text-right" type="number" value="1" oninput="calcular()"></td>
       <td><input class="precio text-right" type="number" value="0" oninput="calcular()"></td>
+      <td><input class="descuento text-right" type="number" value="0" min="0" max="100" oninput="calcular()"></td>
       <td class="text-right"><span class="subtotal">$0</span></td>
       <td><button class="btn-borrar" onclick="borrar(this)">x</button></td>
     `;
@@ -549,12 +560,14 @@
       const desc = fila.querySelector('.desc').value.trim();
       const cant = parseFloat(fila.querySelector('.cant').value);
       const precio = parseFloat(fila.querySelector('.precio').value);
+      const descuento = parseFloat(fila.querySelector('.descuento').value) || 0;
 
       if (desc && cant > 0 && precio >= 0) {
         itemsArray.push({
           descripcion: desc,
           cantidad: cant,
-          precio_unitario: precio
+          precio_unitario: precio,
+          descuento: descuento
         });
       }
     });
